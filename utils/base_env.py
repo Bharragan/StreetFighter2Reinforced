@@ -24,7 +24,7 @@ class BaseStreetFighterEnv(Env):
         self.score = 0
         self.previous_health = 176
         self.opponent_previous_health = 176
-        self.last_hit_time = 39208  # Inicializamos al valor máximo del round timer
+        self.last_hit_time = 0  # Inicializamos al valor máximo del round timer
         return obs
 
     def preprocess(self, observation):
@@ -39,7 +39,7 @@ class BaseStreetFighterEnv(Env):
         frame_delta = obs - self.previous_frame
         self.previous_frame = obs
 
-        current_health = info.get('health', self.previous_health)
+        #current_health = info.get('health', self.previous_health)
         opponent_current_health = info.get('enemy_health', self.opponent_previous_health)
 
         # Penalizaciones y recompensas comunes
@@ -50,11 +50,11 @@ class BaseStreetFighterEnv(Env):
 
         # Verificamos si se hizo daño al oponente
         if opponent_current_health < self.opponent_previous_health:
-            self.last_hit_time = round_timer
+            self.last_hit_time = 0
+        else:
+            self.last_hit_time += 1
 
-        time_since_last_hit = (39208 - self.last_hit_time) / 1000  # Convertimos a segundos
-
-        self.previous_health = current_health
+        #self.previous_health = current_health
         self.opponent_previous_health = opponent_current_health
         return frame_delta, reward, done, info
 
