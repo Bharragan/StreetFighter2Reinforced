@@ -1,3 +1,5 @@
 .venv/
 /opt/
 /logs/
+/data/
+/reports/

@@ -4,6 +4,7 @@ import cv2
 from gym import Env
 from gym.spaces import Box, MultiBinary
 import math
+import os
 
 class BaseStreetFighterEnv(Env):
     def __init__(self):
@@ -16,16 +17,18 @@ class BaseStreetFighterEnv(Env):
         self.previous_health = None  # Valor inicial de salud
         self.opponent_previous_health = None
         self.last_hit_time = None
+        self.frames = []  # List to store frames
 
     def reset(self):
         obs = self.game.reset()
-        obs = self.preprocess(obs)
-        self.previous_frame = obs
+        preprocessed_obs = self.preprocess(obs)
+        self.previous_frame = preprocessed_obs
         self.score = 0
         self.previous_health = 176
         self.opponent_previous_health = 176
         self.last_hit_time = 0  # Inicializamos al valor máximo del round timer
-        return obs
+        self.frames = [obs]  # Initialize frames list with the first frame
+        return preprocessed_obs
 
     def preprocess(self, observation):
         gray = cv2.cvtColor(observation, cv2.COLOR_BGR2GRAY)
@@ -35,11 +38,13 @@ class BaseStreetFighterEnv(Env):
 
     def step(self, action):
         obs, reward, done, info = self.game.step(action)
-        obs = self.preprocess(obs)
-        frame_delta = obs - self.previous_frame
-        self.previous_frame = obs
+        preprocessed_obs = self.preprocess(obs)
+        frame_delta = preprocessed_obs - self.previous_frame
+        self.previous_frame = preprocessed_obs
 
-        #current_health = info.get('health', self.previous_health)
+        # Store the original frame
+        self.frames.append(obs)
+
         opponent_current_health = info.get('enemy_health', self.opponent_previous_health)
 
         # Penalizaciones y recompensas comunes
@@ -54,12 +59,39 @@ class BaseStreetFighterEnv(Env):
         else:
             self.last_hit_time += 1
 
-        #self.previous_health = current_health
         self.opponent_previous_health = opponent_current_health
         return frame_delta, reward, done, info
 
     def render(self, *args, **kwargs):
         self.game.render()
+
+    def save_video(self):
+        # Ensure the directory exists
+        output_dir = 'reports/videos/'
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Create a video writer with normalized filename
+        file_index = 0
+        file_name = os.path.join(output_dir, f'output_video_{file_index}.mp4')
+        
+        # Check if file exists and increment the index if it does
+        while os.path.exists(file_name):
+            file_index += 1
+            file_name = os.path.join(output_dir, f'output_video_{file_index}.mp4')
+
+        # Create a video writer
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec
+        height, width, _ = self.frames[0].shape
+        video_writer = cv2.VideoWriter(file_name, fourcc, 30, (width, height))
+
+        # Write each frame to the video file with the frame number
+        for i, frame in enumerate(self.frames):
+            frame_with_text = frame.copy()
+            cv2.putText(frame_with_text, f'Frame: {i}', (10, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+            video_writer.write(frame_with_text)
+
+        video_writer.release()
+        print(f'Video saved as {file_name}')
 
     def close(self):
         self.game.close()
