@@ -4,8 +4,8 @@ import pandas as pd
 import os
 
 class BalancedStreetFighterEnv(BaseStreetFighterEnv):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, save_video=False, state='guile'):
+        super().__init__(save_video=save_video, state=state)
         self.previous_enemy_health = 176
         self.previous_enemy_matches_won = 0
         self.previous_score = 0
@@ -38,6 +38,7 @@ class BalancedStreetFighterEnv(BaseStreetFighterEnv):
             distance_reward = -0.004 * (distance - 100)  # Penalización por estar fuera del rango
 
         time_penalty = -0.0005 * time_since_last_hit
+        
         aggressiveness_signal = 0.5 * distance_reward + 0.5 * time_penalty
 
         # Normales: Daño al oponente, daño recibido y puntuación
@@ -74,10 +75,10 @@ class BalancedStreetFighterEnv(BaseStreetFighterEnv):
             'aggressiveness_signal': aggressiveness_signal,
             'normal_signal': normal_signal,
             'match_reward': match_reward,
-            'distance_reward' : distance_reward,
+            'distance_reward': distance_reward,
             'time_penalty': time_penalty,
-            'current_health':current_health,
-            'opponent_current_health':opponent_current_health,
+            'current_health': current_health,
+            'opponent_current_health': opponent_current_health,
             'done': done
         })
         if done and self.save_data_flag:
@@ -91,7 +92,6 @@ class BalancedStreetFighterEnv(BaseStreetFighterEnv):
         self.previous_enemy_health = opponent_current_health
 
         return frame_delta, reward, done, info
-
 
     def save(self):
         # Save rewards data to an Excel file with incremental numbering in the specified directory
@@ -116,3 +116,6 @@ class BalancedStreetFighterEnv(BaseStreetFighterEnv):
     def disable_save(self):
         """Disable saving data to Excel on termination"""
         self.save_data_flag = False
+
+    def close(self):
+        super().close()  # Ensure that the base class's close method is called
